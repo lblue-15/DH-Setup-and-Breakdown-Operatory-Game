@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dental Operatory: Clinical Rationale Simulator</title>
+<style>
+  :root {
+    --primary: #991b1b;
+    --accent: #ef4444;
+    --success: #16a34a;
+    --error: #dc2626;
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --text: #f8fafc;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: var(--bg);
+    color: var(--text);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+  }
+  .game-container {
+    width: 100%;
+    max-width: 860px;
+    background: var(--surface);
+    border-radius: 16px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+    border: 2px solid var(--primary);
+  }
+  .screen-header {
+    background: #450a0a;
+    padding: 16px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid var(--primary);
+  }
+  .screen-header h2 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #fca5a5;
+  }
+  .mode-switch {
+    display: flex;
+    gap: 8px;
+  }
+  .mode-btn {
+    background: #7f1d1d;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+  }
+  .mode-btn.active {
+    background: var(--accent);
+    color: white;
+    font-weight: bold;
+  }
+  .workspace {
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    min-height: 460px;
+  }
+  @media(max-width: 768px) {
+    .workspace { grid-template-columns: 1fr; }
+  }
+  .tray-section {
+    background: #0f172a;
+    padding: 20px;
+    border-right: 1px solid #334155;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .tray-section h3 {
+    margin: 0 0 10px 0;
+    font-size: 0.95rem;
+    color: #fca5a5;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .item-pool {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 380px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  .draggable-item {
+    background: #334155;
+    border: 1px solid #475569;
+    color: white;
+    padding: 12px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    text-align: left;
+    transition: all 0.15s ease;
+    line-height: 1.3;
+  }
+  .draggable-item:hover {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+    transform: translateX(3px);
+  }
+  .stage-section {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background: #1e293b;
+  }
+  .visual-preview {
+    width: 100%;
+    height: 160px;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 14px;
+    background: #000;
+  }
+  .visual-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .narrative-prose {
+    font-size: 0.95rem;
+    line-height: 1.55;
+    color: #e2e8f0;
+    background: #0f172a;
+    border-left: 3px solid #f87171;
+    padding: 12px 14px;
+    border-radius: 0 6px 6px 0;
+    margin-bottom: 12px;
+  }
+  .call-to-action {
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: #fca5a5;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .sublevel-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .sublevel-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #0f172a;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #334155;
+    font-size: 0.85rem;
+  }
+  .sublevel-row select {
+    background: #1e293b;
+    color: white;
+    border: 1px solid #475569;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    max-width: 65%;
+  }
+  .feedback-banner {
+    padding: 12px 14px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: none;
+    margin-bottom: 10px;
+    line-height: 1.45;
+  }
+  .feedback-banner.correct { background: var(--success); color: white; }
+  .feedback-banner.incorrect { 
+    background: #450a0a; 
+    color: #fecaca; 
+    border: 1px solid var(--accent);
+  }
+  .status-footer {
+    font-size: 0.85rem;
+    color: #fca5a5;
+    display: flex;
+    justify-content: space-between;
+    font-weight: bold;
+    border-top: 1px solid #334155;
+    padding-top: 10px;
+  }
+  .submit-btn {
+    background: #16a34a;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 4px;
+  }
+  .submit-btn:hover { background: #15803d; }
+</style>
+</head>
+<body>
+
+<div class="game-container">
+  <div class="screen-header">
+    <h2 id="header-title">Clinical Competency: Infection Control Simulator</h2>
+    <div class="mode-switch">
+      <button class="mode-btn active" id="mode-btn-setup" onclick="switchMode('setup')">Unit Setup</button>
+      <button class="mode-btn" id="mode-btn-breakdown" onclick="switchMode('breakdown')">Unit Breakdown</button>
+    </div>
+  </div>
+
+  <div class="workspace">
+    <!-- Left Panel: Actions -->
+    <div class="tray-section">
+      <h3 id="panel-title">Available Actions</h3>
+      <div class="item-pool" id="item-pool"></div>
+    </div>
+
+    <!-- Right Panel: Narrative & Progression -->
+    <div class="stage-section">
+      <div>
+        <div class="visual-preview">
+          <img id="stage-img" src="" alt="Operatory View">
+        </div>
+        <div class="narrative-prose" id="narrative-box">
+          Loading scenario...
+        </div>
+        <div class="call-to-action" id="prompt-question">
+          What is your immediate next action?
+        </div>
+        <div id="dynamic-sublevel-area"></div>
+        <div id="feedback" class="feedback-banner"></div>
+      </div>
+
+      <div class="status-footer">
+        <span id="step-counter">Step 1 of X</span>
+        <span id="strike-counter" style="color: #ef4444;">FATAL ERROR: 0 / 1</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const protocols = {
+  setup: [
+    { 
+      type: 'single', 
+      text: "Cover gown from Forms Room (+ mask)", 
+      story: "You arrive at the clinical bay. The operatory is quiet and completely barren. Before touching a single countertop or setting your things down, you head down the hall to prepare your baseline personal barrier.",
+      riskRationale: "You touched operatory equipment before establishing a barrier. Any ambient bioaerosols or pathogens on your personal attire have now been brought directly into the sterile field.",
+      img: "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Wash hands", 
+      story: "You retrieve your clean cover gown and fresh surgical mask from the Forms Room, slipping them into place. Your hands have now handled communal door handles, fabric, and ties.",
+      riskRationale: "You handled supplies with unwashed hands immediately after touching communal gown ties and door handles. Transient flora have now transferred to your clean clinic accessories.",
+      img: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Store personal items + get out supplies (keyboard, mouse, mirror, ruler, pencil/pen)", 
+      story: "Lathering at the sink with antimicrobial soap, you perform a thorough hand scrub and dry your hands completely with clean paper towels.",
+      riskRationale: "You skipped staging your clinical workspace. Leaving personal bags and uncased writing utensils out during disinfection creates uncontrolled cross-contamination vectors.",
+      img: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'sublevel', 
+      title: "Establish Full Personal Protection (PPE)", 
+      story: "Your personal backpack is stowed away safely. Laid out on your workspace are your keyboard, mouse, clinic mirror, measurement ruler, and charting pens ready for action.",
+      riskRationale: "PPE was donned out of order. Putting on eyewear or masks after gowns are contaminated, or handling face protection improperly, transfers pathogens directly toward your mucous membranes.",
+      items: ["Cover gown", "Mask", "Eyewear"],
+      img: "https://images.unsplash.com/photo-1583912267550-d44d9f602352?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Wash hands", 
+      story: "Your cover gown is tied securely behind your neck and back, your mask is pinched tight over the bridge of your nose, and your side-shield eyewear sits firmly in place.",
+      riskRationale: "Gloving over unwashed hands traps moisture and bacteria, causing rapid microbial proliferation under the glove membrane, and risks glove tears introducing unwashed skin flora to sterile surfaces.",
+      img: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'sublevel', 
+      title: "Don Handwear for Heavy Disinfection", 
+      story: "You re-scrub your hands at the sink to eliminate any micro-flora transferred while tying your gown and fitting your eyewear.",
+      riskRationale: "Utility gloves alone without a nitrile under-layer fail chemical permeation standards, while nitrile alone tears instantly against metal unit edges during heavy scrubbing.",
+      items: ["Nitrile gloves", "Utility gloves"],
+      img: "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Clean + Disinfect surfaces (sink, flags, counters, chair, base, pedals, etc.)", 
+      story: "Your hands are protected by flexible nitrile gloves with heavy-duty puncture-resistant utility gloves layered securely over top.",
+      riskRationale: "Skipping broad surface disinfection leaves bloodborne pathogens, respiratory droplets, and spore residues from the prior shift on high-touch clinical surfaces.",
+      img: "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Wash outside of overhead w/ wet paper towel", 
+      story: "You scrub down every critical zone: the entire basin and faucet of the sink, unit flags, countertops, the dental chair upholstery, chair base, and all floor pedals.",
+      riskRationale: "The overhead light housing collects dry aerosol settlement. Failing to wipe it down allows heat from the bulb to convection-circulate dried pathogens into the clean field.",
+      img: "https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Wash utility glove hands", 
+      story: "You take a damp paper towel and carefully clean the outer housing and shield of the overhead dental light, removing lingering dust and chemical residue.",
+      riskRationale: "Attempting to remove utility gloves without washing their exteriors transfers concentrated hospital-grade disinfectant and stripped grease directly onto your under-gloves and skin.",
+      img: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'sublevel', 
+      title: "Utility and Glove Management", 
+      story: "You step to the sink and lather soap over the thick utility gloves, washing chemical residue off the heavy rubber exterior like a second skin.",
+      riskRationale: "Improper glove doffing sequence causes the contaminated outer surface of the utility gloves to snap against bare forearms or cross-contaminate clean storage areas.",
+      items: ["Remove + disinfect utility gloves", "Doff nitrile gloves + discard"],
+      img: "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Wash hands", 
+      story: "Your utility gloves are disinfected and staged, and your contaminated nitrile gloves have been peeled off and dropped straight into the waste bin.",
+      riskRationale: "Peeled-off gloves frequently have microscopic pinhole leaks. Touching your gown or face without washing hands right now contaminates your personal body barriers.",
+      img: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'sublevel', 
+      title: "Doff Protective Outerwear", 
+      story: "You wash your bare hands under running warm water and dry them completely. The harsh disinfection phase of setup is officially complete.",
+      riskRationale: "Removing the mask before gown or eyewear risks dropping airborne chemicals or particulates directly into your mouth and eyes. Mask must be placed face-down to prevent surface transfer.",
+      items: ["Cover gown", "Eyewear", "Mask (face-down on paper towel)"],
+      img: "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Wash hands", 
+      story: "Your gown is rolled off without touching the outside, eyewear is removed, and your mask rests face-down on a clean paper towel to avoid environmental transfer.",
+      riskRationale: "Handling outer PPE inevitably brushes unwashed clothing fibers against your fingers. Touching operatory power buttons right now contaminates clean equipment switches.",
+      img: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Turn on master switch + water", 
+      story: "With clean, dried hands, you are ready to bring the operatory's mechanical systems to life.",
+      riskRationale: "Attempting to purge lines or load water without master unit power creates back-siphonage in the manifold and fails to pressurize internal anti-retraction valves.",
+      img: "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Prepare waterline (rinse/check bottle, fill fresh water)", 
+      story: "The dental unit hums to life as you flip the master switch, pressurizing the lines and preparing the delivery cart.",
+      riskRationale: "Flushing lines before inspecting the bottle circulates slimy stagnant biofilm and fungal plugs through the dental unit water lines (DUWL), clogging turbine handpieces.",
+      img: "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Flush waterline for 1-2 min (purge button)", 
+      story: "You unscrew the reservoir bottle, inspect the pickup tube and filter for obstructions, rinse it clean, and lock it back in place filled with fresh water.",
+      riskRationale: "Failing to purge lines leaves colony-forming units (CFUs) of Legionella and Pseudomonas in excess of 500 CFU/mL, exposing your patient to waterborne bacterial infections.",
+      img: "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Go to Central Supply (saliva ejector, HVE, A/W syringe tip)", 
+      story: "Holding the lines over the sink, you engage the purge button and flush continuous water through the system for a full 2 minutes.",
+      riskRationale: "Placing barriers before obtaining suction tips results in rummaging through supply drawers with barriered hands or placing contaminated items on newly barriered tubing.",
+      img: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Plastic Barrier Covers (headrest, keyboard, mouse, tubing)", 
+      story: "You walk over to Central Supply and pick up fresh saliva ejectors, high-volume evacuation (HVE) tips, and sterile air/water syringe tips.",
+      riskRationale: "Applying tape before large plastic covers creates gaps where saliva and aerosol spray seep directly into the seams of the chair headrest and keyboard electronics.",
+      img: "https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Blue Barrier Tape (light handle, switch, chair buttons, ruler)", 
+      story: "Clear plastic sleeves slide smoothly over the chair headrest, the computer keyboard, the optical mouse, and all suction tubing sleeves.",
+      riskRationale: "Failing to tape high-touch switch points forces you to spray liquid chemical disinfectants directly into electrical buttons, risking short circuits and cross-infection.",
+      img: "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Client chart from Forms Room", 
+      story: "You carefully press perforated blue barrier film across the overhead light handles, the light switch, operator chair buttons, and your periodontal ruler.",
+      riskRationale: "Bringing sterile cassettes into the room before pulling the client chart risks leaving patient charts on contaminated hallway ledges or tracking paper dust over sterile trays.",
+      img: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Instrument cassette from IPA, place unopened on bracket tray", 
+      story: "You retrieve the client’s physical chart from the Forms Room and place it securely at the computer workstation.",
+      riskRationale: "Opening the instrument cassette before the patient is seated exposes sterile scalers and probes to ambient airborne clinic contaminants.",
+      img: "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=600&q=80" 
+    }
+  ],
+  breakdown: [
+    { 
+      type: 'single', 
+      text: "Remove instrument bin + cleanser (sprinkle in sink)", 
+      story: "Your patient has been dismissed and has exited the clinic floor. The operatory is contaminated with aerosols and used instruments.",
+      riskRationale: "Touching contaminated patient items before preparing the decontamination sink and enzymatic cleanser leads to dried proteinaceous debris adhering permanently to scalers.",
+      img: "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'sublevel', 
+      title: "Don PPE for Operatory Breakdown", 
+      story: "You pull out the instrument bin and sprinkle enzymatic cleanser powder directly into the basin of the sink.",
+      riskRationale: "Handling sharps and biohazardous waste without full PPE risks aerosolized saliva and blood splashing directly into your conjunctiva or onto personal clothing.",
+      items: ["Cover gown", "Mask", "Eyewear"],
+      img: "https://images.unsplash.com/photo-1583912267550-d44d9f602352?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Wash hands", 
+      story: "Your breakdown cover gown is tied, mask is secured over your face, and protective eyewear is in position.",
+      riskRationale: "Donning heavy utility gloves over unwashed hands traps heat and transient bacteria against your skin for the entire duration of clean-up.",
+      img: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'sublevel', 
+      title: "Double-Glove for Tear Down", 
+      story: "You complete a rigorous handwash at the sink, ensuring clean skin before entering tight gloves.",
+      riskRationale: "Handling contaminated metal scaling tips without heavy puncture-proof utility gloves over nitrile causes accidental percutaneous sharps sticks with Hepatitis B/C exposure risk.",
+      items: ["Nitrile gloves", "Utility gloves"],
+      img: "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Remove disposable items from cassette + set on tray", 
+      story: "Both your nitrile gloves and heavy utility gloves are seated securely over your gown cuffs.",
+      riskRationale: "Sending disposable gauze, cotton rolls, and anesthetic carpules into the autoclave cassette jams ultrasonic baths and cross-contaminates cleaning tanks.",
+      img: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Close + lock cassette + take to IPA (place in holding sink)", 
+      story: "You separate all disposable cotton rolls, 2x2 gauzes, and suction tips from the stainless steel instruments, setting them on the bracket tray.",
+      riskRationale: "Transporting an unlatched cassette down the hallway creates an extreme sharps hazard if dropped, spewing contaminated curettes across common corridors.",
+      img: "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Place autoclavable items in bin w/ lid closed (Bring to IPA)", 
+      story: "The metal cassette clicks shut and locks. You carry it safely down the hall to the IPA and submerge it in the holding sink.",
+      riskRationale: "Carrying loose autoclavable items without a closed lid violates OSHA Bloodborne Pathogen transport standards and exposes staff to open bioburden.",
+      img: "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Wash, dry + disinfect bin + place back in cabinet (w/o gloves @ end)", 
+      story: "You load remaining autoclavable loose items into your transport bin, snap the lid tight, and bring them down to IPA.",
+      riskRationale: "Placing an unwashed transport bin back into clean operatory cabinetry contaminates the storage supply cupboards with transport slime.",
+      img: "https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Remove headrest cover + collect trash & Flush lines 30s", 
+      story: "You thoroughly wash, dry, and disinfect the transport container, taking off your gloves at the very end to place it cleanly in the cabinet.",
+      riskRationale: "Disinfecting surfaces before stripping barriers simply cleans the plastic wrapper while leaving blood and saliva underneath untouched.",
+      img: "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Clean + Disinfect surfaces", 
+      story: "The plastic headrest sleeve is stripped, all loose trash and tray liners are bundled into the bag, and waterlines are purged with disinfectant for 30 seconds.",
+      riskRationale: "Failing to perform the clean/disinfect wipe cycle allows biofilm to settle into counter pores and leaves communicable viruses viable on chair arms.",
+      img: "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Wash outside of overhead (wet paper towel)", 
+      story: "Using the wipe-discard-wipe method, you disinfect the delivery unit, counters, chair arms, light handles, and chair base.",
+      riskRationale: "Spraying chemical cleaners directly onto hot overhead lighting fixtures can cause the glass lens to shatter or bake chemical vapors into clinic air.",
+      img: "https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Empty trash + replace liner", 
+      story: "You wipe down the exterior surfaces of the overhead lamp with a fresh, wet paper towel, leaving the housing clean.",
+      riskRationale: "Leaving biohazard waste bags unsealed overnight creates foul bacterial odors and attracts pests into clinical treatment suites.",
+      img: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Clean + dry sink", 
+      story: "You tie off the heavy biohazard trash liner, toss it in the central bin, and stretch a fresh clean liner smoothly into the can.",
+      riskRationale: "Leaving standing stagnant disinfectant solution in the operatory sink causes corrosion of plumbing and cross-contaminates the handwashing zone.",
+      img: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Wash utility glove hands", 
+      story: "You scour the basin and faucet with cleanser, rinsing all foam down the drain and wiping the basin dry with fresh paper towels.",
+      riskRationale: "Doffing contaminated utility gloves without washing them first transfers dirty chemical slurry onto clean nitrile under-gloves.",
+      img: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Remove + disinfect utility. Doff nitrile gloves + discard", 
+      story: "You scrub your gloved hands under the faucet with soap, removing grime from the exterior rubber grooves of the utility gloves.",
+      riskRationale: "Tossing utility gloves into common bins or improperly pulling nitrile gloves rolls pathogens back across your wrists and forearms.",
+      img: "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Wash hands", 
+      story: "You slide off the utility gloves, disinfect them thoroughly for storage, and peel off your thin nitrile gloves directly into the waste bin.",
+      riskRationale: "Touching facial PPE with unwashed hands immediately following glove removal transfers trapped sweat and microscopic glove-permeated bacteria to your face.",
+      img: "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'sublevel', 
+      title: "Doff Breakdown PPE for Disposal", 
+      story: "You lather soap over your bare hands for 20 seconds, rinse away any sweat or microscopic leaks, and dry off thoroughly.",
+      riskRationale: "Removing masks before contaminated gowns causes aerosolized splatter on the gown fabric to brush across your nose and lips during gown stripping.",
+      items: ["Cover gown (inside out)", "Eyewear", "Mask (discard in trash)"],
+      img: "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Wash hands", 
+      story: "You unfasten your gown, rolling the contaminated exterior inside-out into a ball, remove your eyewear, and drop your mask straight into the trash.",
+      riskRationale: "Touching the mechanical chair controls with hands that just stripped contaminated cover gowns smears pathogens over the newly sanitized chair arms.",
+      img: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Put chair in highest position (stack tray + light over chair)", 
+      story: "You perform another rigorous post-doffing handwash at the sink, drying your skin completely with paper towels.",
+      riskRationale: "Leaving the bracket tray and light arm extended out into the operatory walkway creates an extreme physical head-strike hazard for incoming staff.",
+      img: "https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Put foot pedals under chair", 
+      story: "You step on the chair switch, raising the patient chair to its highest mechanical limit, swinging the bracket tray and overhead light neatly over top.",
+      riskRationale: "Leaving rheostats and suction foot controls in the open walking path creates severe trip hazards and damages hydraulic connection cords.",
+      img: "https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Operator chair in proper place", 
+      story: "You lift the rheostat foot pedals and electrical lines off the floor, sliding them completely underneath the elevated chair base.",
+      riskRationale: "Failing to dock the clinician stool obstructs emergency egress routes from the operatory bay.",
+      img: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Turn off master switch + water (empty water bottle)", 
+      story: "You roll your clinician stool smoothly over and tuck it into its designated dock against the counter.",
+      riskRationale: "Leaving the water bottle pressurized overnight leads to blown internal solenoid valves, waterline leaks, and rapid overnight bacterial colonization.",
+      img: "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Return supplies to their drawers", 
+      story: "You switch off the master unit, shut off the water feed, and unscrew the water reservoir bottle to completely empty it into the sink.",
+      riskRationale: "Leaving administrative items like mirrors and measurement rulers loose on counters exposes them to janitorial dust and compromises operatory readiness.",
+      img: "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=600&q=80" 
+    },
+    { 
+      type: 'single', 
+      text: "Turn off computer", 
+      story: "You wipe down and return all charting supplies, pens, rulers, and mirrors neatly into their respective operatory drawers.",
+      riskRationale: "Leaving the clinical terminal logged in violates HIPAA privacy regulations by exposing patient dental records and histories to unauthorized eyes.",
+      img: "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=600&q=80" 
+    }
+  ]
+};
+
+let currentMode = 'setup';
+let currentIndex = 0;
+let failed = false;
+
+function switchMode(mode) {
+  currentMode = mode;
+  currentIndex = 0;
+  failed = false;
+  document.getElementById('mode-btn-setup').classList.toggle('active', mode === 'setup');
+  document.getElementById('mode-btn-breakdown').classList.toggle('active', mode === 'breakdown');
+  document.getElementById('header-title').innerText = mode === 'setup' 
+    ? 'Clinical Competency: Setup (Narrative Mode)' 
+    : 'Clinical Competency: Breakdown (Narrative Mode)';
+  loadStep();
+}
+
+function loadStep() {
+  if (failed) return;
+  const list = protocols[currentMode];
+  if (currentIndex >= list.length) {
+    document.getElementById('narrative-box').innerHTML = `🏆 <strong>COMPETENCY EVALUATION COMPLETE: PASSED WITH DISTINCTION.</strong><br><br>You executed every single phase of clinical asepsis in flawless order. Your instructor signs off on your clinical record!`;
+    document.getElementById('prompt-question').innerText = "Exam signed and submitted.";
+    document.getElementById('panel-title').innerText = "Competency Sign-Off";
+    document.getElementById('item-pool').innerHTML = `<button class="draggable-item" onclick="switchMode('${currentMode}')" style="background:var(--success);text-align:center;font-weight:bold;">Retake This Clinical Protocol</button>`;
+    document.getElementById('stage-img').src = "https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=600&q=80";
+    document.getElementById('dynamic-sublevel-area').innerHTML = '';
+    return;
+  }
+
+  const step = list[currentIndex];
+  document.getElementById('stage-img').src = step.img;
+  document.getElementById('narrative-box').innerHTML = step.story;
+  document.getElementById('prompt-question').innerHTML = step.type === 'single'
+    ? "What is your immediate next action to maintain asepsis?"
+    : "Select the exact sequence to maintain infection control:";
+  
+  document.getElementById('step-counter').innerText = `Step ${currentIndex + 1} of ${list.length}`;
+  document.getElementById('strike-counter').innerText = `FATAL ERROR: 0 / 1 (Instant Fail Active)`;
+  document.getElementById('feedback').style.display = 'none';
+  document.getElementById('dynamic-sublevel-area').innerHTML = '';
+
+  const poolContainer = document.getElementById('item-pool');
+  poolContainer.innerHTML = '';
+
+  if (step.type === 'single') {
+    document.getElementById('panel-title').innerText = "Choose Next Clinical Action";
+
+    const singleSteps = list.filter(item => item.type === 'single');
+    let pool = [step.text];
+    let attempts = 0;
+    while (pool.length < Math.min(4, singleSteps.length) && attempts < 50) {
+      attempts++;
+      let randomItem = singleSteps[Math.floor(Math.random() * singleSteps.length)].text;
+      if (!pool.includes(randomItem)) {
+        pool.push(randomItem);
+      }
+    }
+    pool.sort(() => Math.random() - 0.5);
+
+    pool.forEach(itemText => {
+      const btn = document.createElement('button');
+      btn.className = 'draggable-item';
+      btn.innerText = itemText;
+      btn.onclick = () => checkSingle(itemText, step.text);
+      poolContainer.appendChild(btn);
+    });
+  } else if (step.type === 'sublevel') {
+    document.getElementById('panel-title').innerText = "Sequencing Console";
+
+    let shuffledItems = [...step.items].sort(() => Math.random() - 0.5);
+
+    let htmlContent = `<div class="sublevel-container">`;
+    step.items.forEach((_, idx) => {
+      htmlContent += `
+        <div class="sublevel-row">
+          <span>Position #${idx + 1}</span>
+          <select id="sub-select-${idx}">
+            <option value="">-- Select Item --</option>
+            ${shuffledItems.map(item => `<option value="${item.replace(/"/g, '&quot;')}">${item}</option>`).join('')}
+          </select>
+        </div>`;
+    });
+    htmlContent += `</div><button class="submit-btn" onclick="checkSublevel()">Submit Sequence to Proctor</button>`;
+    
+    document.getElementById('dynamic-sublevel-area').innerHTML = htmlContent;
+    poolContainer.innerHTML = `<div style="color:#94a3b8; font-size:0.85rem; padding:10px; line-height:1.4;">Lock in the exact order for this multi-step clinical barrier on the right panel.</div>`;
+  }
+}
+
+function checkSingle(selected, correct) {
+  if (failed) return;
+  const fb = document.getElementById('feedback');
+  fb.style.display = 'block';
+
+  if (selected === correct) {
+    fb.className = 'feedback-banner correct';
+    fb.innerText = "✓ Sequence approved by instructor. Moving to next phase...";
+    currentIndex++;
+    setTimeout(() => { loadStep(); }, 900);
+  } else {
+    triggerFail();
+  }
+}
+
+function checkSublevel() {
+  if (failed) return;
+  const step = protocols[currentMode][currentIndex];
+  let userOrder = [];
+  
+  for (let i = 0; i < step.items.length; i++) {
+    const el = document.getElementById(`sub-select-${i}`);
+    if (!el || !el.value) {
+      const fb = document.getElementById('feedback');
+      fb.style.display = 'block';
+      fb.className = 'feedback-banner incorrect';
+      fb.innerText = "You must assign an item to every position in the sequence!";
+      return;
+    }
+    userOrder.push(el.value);
+  }
+
+  const uniqueItems = new Set(userOrder);
+  if (uniqueItems.size !== step.items.length) {
+    const fb = document.getElementById('feedback');
+    fb.style.display = 'block';
+    fb.className = 'feedback-banner incorrect';
+    fb.innerText = "Duplicate detected! Each protective item can only be placed once.";
+    return;
+  }
+
+  let isCorrect = true;
+  for (let i = 0; i < step.items.length; i++) {
+    if (userOrder[i] !== step.items[i]) {
+      isCorrect = false;
+      break;
+    }
+  }
+
+  const fb = document.getElementById('feedback');
+  fb.style.display = 'block';
+
+  if (isCorrect) {
+    fb.className = 'feedback-banner correct';
+    fb.innerText = "✓ Exact barrier sequence verified. Protocol intact.";
+    currentIndex++;
+    setTimeout(() => { loadStep(); }, 1100);
+  } else {
+    triggerFail();
+  }
+}
+
+function triggerFail() {
+  failed = true;
+  const step = protocols[currentMode][currentIndex];
+  const fb = document.getElementById('feedback');
+  fb.style.display = 'block';
+  fb.className = 'feedback-banner incorrect';
+  
+  // Highlighting specific clinical risk rationale
+  fb.innerHTML = `<strong>❌ CRITICAL BREACH OF ASEPSIS — EXAM FAILED</strong><br><br><em>Clinical Consequence:</em> ${step.riskRationale}`;
+  
+  document.getElementById('strike-counter').innerText = `FATAL ERROR: 1 / 1 (FAILED)`;
+  document.getElementById('stage-img').src = "https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=600&q=80";
+  document.getElementById('dynamic-sublevel-area').innerHTML = '';
+  document.getElementById('prompt-question').innerText = "Competency stopped by instructor.";
+  
+  document.getElementById('item-pool').innerHTML = `
+    <div style="text-align:center; padding: 10px;">
+      <p style="color:#fca5a5; font-weight:bold; margin-bottom:10px; font-size:0.85rem;">One mistake means a zero on the competency evaluation.</p>
+      <button class="draggable-item" onclick="switchMode('${currentMode}')" style="background:var(--accent);text-align:center;font-weight:bold; width:100%;">Restart Competency From Step 1</button>
+    </div>`;
+}
+
+loadStep();
+</script>
+</body>
+</html>
